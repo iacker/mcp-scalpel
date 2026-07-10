@@ -2,6 +2,8 @@
 
 **Local semantic tool-filtering proxy for the [Docker MCP Gateway](https://docs.docker.com/desktop/features/gordon/mcp/). Cuts per-turn input tokens by routing `tools/list` to the relevant subset — no AWS, no cloud, no external LLM on the hot path.**
 
+![mcp-scalpel architecture](docs/architecture.png)
+
 ## The problem
 
 When an MCP client connects to a gateway exposing many tools, the **entire tool catalog** (names + descriptions + JSON input schemas) is injected into **every** LLM call. On a real Docker MCP Gateway with 49 tools that's **~18,700 input tokens per turn**, re-sent on every message, forever.

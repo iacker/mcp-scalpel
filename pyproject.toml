@@ -1,0 +1,24 @@
+[project]
+name = "mcp-scalpel"
+version = "0.1.0"
+description = "Local semantic tool-filtering proxy for the Docker MCP Gateway. Cuts per-turn input tokens by routing tools/list to the relevant subset — no AWS, no cloud."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Erwan Billard" }]
+keywords = ["mcp", "docker", "token-optimization", "llm", "gateway", "context-engineering"]
+dependencies = ["numpy>=1.24"]
+
+[project.optional-dependencies]
+embeddings = ["sentence-transformers>=2.2"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+mcp-scalpel = "mcp_scalpel.proxy:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

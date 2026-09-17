@@ -80,13 +80,13 @@ class ToolFilter:
         max_tools: int = 15,
         min_similarity: float = 0.05,
     ) -> None:
-        self.tools = tools
-        self.by_name = {t["name"]: t for t in tools}
-        self.names = [t["name"] for t in tools]
+        self.tools = [t for t in tools if t.get("name")]
+        self.by_name = {t["name"]: t for t in self.tools}
+        self.names = [t["name"] for t in self.tools]
         self.max_tools = max_tools
         self.min_similarity = min_similarity
         self.vectorizer = vectorizer or TfidfVectorizer()
-        self._matrix = self.vectorizer.fit([tool_signal(t) for t in tools])
+        self._matrix = self.vectorizer.fit([tool_signal(t) for t in self.tools])
 
     def route(self, query: str, extra_terms: str = "") -> list[dict]:
         """Return the tools most relevant to a query.

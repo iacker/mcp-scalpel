@@ -61,3 +61,12 @@ if __name__ == "__main__":
             fn()
             print(f"PASS {name}")
     print("all tests passed")
+
+
+def test_catalog_skips_entries_without_name():
+    # a malformed upstream tools/list entry lacking 'name' must be skipped,
+    # not crash the proxy with a KeyError during indexing
+    tools = load_tools()[:5] + [{"description": "no name key"}]
+    f = ToolFilter(tools, max_tools=5)
+    assert all(t.get("name") for t in f.tools)
+    assert len(f.names) == len([t for t in tools if t.get("name")])

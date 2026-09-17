@@ -32,6 +32,28 @@ UPSTREAM_CMD = os.environ.get(
 MAX_TOOLS = int(os.environ.get("SCALPEL_MAX_TOOLS", "15"))
 TASK_HINT = os.environ.get("SCALPEL_TASK_HINT", "")
 LOG_PATH = os.environ.get("SCALPEL_LOG", "")
+# Cap a single newline-delimited frame so one oversized line cannot grow the
+# proxy's memory without bound. Default 16 MiB, override via SCALPEL_MAX_FRAME_BYTES.
+MAX_FRAME_BYTES = int(os.environ.get("SCALPEL_MAX_FRAME_BYTES", str(16 * 1024 * 1024)))
+
+
+def _read_frame(stream) -> str | None:
+    """Read one newline-delimited frame, bounded to MAX_FRAME_BYTES.
+
+    Returns "" at EOF, None if the frame exceeded the cap (drained to the next
+    newline and dropped), otherwise the line. Bounding the read keeps a single
+    hostile or buggy oversized frame from exhausting proxy memory."""
+    line = stream.readline(MAX_FRAME_BYTES + 1)
+    if line == "":
+        return ""
+    if len(line) > MAX_FRAME_BYTES and not line.endswith("\n"):
+        # oversized: discard the rest of this line without buffering it
+        while True:
+            chunk = stream.readline(MAX_FRAME_BYTES + 1)
+            if chunk == "" or chunk.endswith("\n"):
+                break
+        return None
+    return line
 
 SEARCH_TOOL = {
     "name": "scalpel_search_tools",
@@ -89,9 +111,11 @@ class ScalpelProxy:
         """Send a request upstream and read until the matching id comes back."""
         self._to_upstream(obj)
         for _ in range(200):
-            line = self.proc.stdout.readline()
-            if not line:
+            line = _read_frame(self.proc.stdout)
+            if line == "":
                 return None
+            if line is None:
+                continue  # oversized frame dropped
             line = line.strip()
             if not line:
                 continue
@@ -166,9 +190,11 @@ class ScalpelProxy:
     # ---- main loop ---------------------------------------------------------
     def run(self) -> None:
         while True:
-            raw = sys.stdin.readline()
-            if not raw:
+            raw = _read_frame(sys.stdin)
+            if raw == "":
                 break
+            if raw is None:
+                continue  # oversized frame dropped
             raw = raw.strip()
             if not raw:
                 continue
